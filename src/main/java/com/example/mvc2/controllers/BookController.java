@@ -42,7 +42,7 @@ public class BookController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete() {
+    public void softDelete() {
 
     }
 }
