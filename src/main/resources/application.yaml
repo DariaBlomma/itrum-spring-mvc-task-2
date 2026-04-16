@@ -1,3 +1,25 @@
 spring:
   application:
     name: mvc2
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mvc2db
+    username: mvc2user
+    password: mvc2pass
+    driver-class-name: org.postgresql.Driver
+    jpa:
+      open-in-view: false
+      hibernate:
+        ddl-auto: update
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
+          dialect: org.hibernate.dialect.PostgreSQLDialect
+    jackson:
+      default-property-inclusion: non_null
+    profiles:
+      active: dev #or prod
+  server:
+    port: 8080
+    servlet:
+      context-path: /api
