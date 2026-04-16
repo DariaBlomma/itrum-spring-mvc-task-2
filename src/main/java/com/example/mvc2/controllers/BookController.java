@@ -2,7 +2,9 @@ package com.example.mvc2.controllers;
 
 import com.example.mvc2.dtos.books.BookRequest;
 import com.example.mvc2.dtos.books.BookResponse;
+import com.example.mvc2.services.BookService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -12,11 +14,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/books")
+@RequiredArgsConstructor
 public class BookController {
+    private final BookService bookService;
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public BookResponse create(@Valid @RequestBody BookRequest request) {
-
+        return bookService.create(request);
     }
 
     @GetMapping("/{id}")

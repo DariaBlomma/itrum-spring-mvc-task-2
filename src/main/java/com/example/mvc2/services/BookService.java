@@ -2,16 +2,47 @@ package com.example.mvc2.services;
 
 import com.example.mvc2.dtos.books.BookRequest;
 import com.example.mvc2.dtos.books.BookResponse;
+import com.example.mvc2.entities.Author;
+import com.example.mvc2.entities.Book;
+import com.example.mvc2.exceptions.InvalidRequestException;
+import com.example.mvc2.mappers.BookMapper;
+import com.example.mvc2.repositories.AuthorRepository;
+import com.example.mvc2.repositories.BookRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class BookService {
-    public BookResponse create(BookRequest request) {
+    private final BookRepository bookRepository;
+    private final BookMapper bookMapper;
+    private final AuthorRepository authorRepository;
 
+    @Transactional
+    public BookResponse create(BookRequest request) {
+        Book book = bookMapper.toEntity(request);
+        List<Author> activeAuthors = authorRepository.findActiveByIds(request.getAuthorIds());
+        if (activeAuthors.size() < request.getAuthorIds().size()) {
+            Set<Long> foundIds = activeAuthors.stream()
+                    .map(Author::getId)
+                    .collect(Collectors.toSet());
+
+            Set<Long> invalidIds = request.getAuthorIds().stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toSet());
+            throw new InvalidRequestException("Some authors do not exist or were deleted. Invalid ids are: " + invalidIds);
+        }
+        book.setAuthors(new HashSet<>(activeAuthors));
+        Book saved =  bookRepository.save(book);
+        return bookMapper.toResponse(saved);
     }
 
     public BookResponse getOne(Long bookId) {
