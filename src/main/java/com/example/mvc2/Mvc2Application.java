@@ -1,13 +1,13 @@
-package com.example.mvc1;
+package com.example.mvc2;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class Mvc1Application {
+public class Mvc2Application {
 
 	public static void main(String[] args) {
-		SpringApplication.run(Mvc1Application.class, args);
+		SpringApplication.run(Mvc2Application.class, args);
 	}
 
 }
