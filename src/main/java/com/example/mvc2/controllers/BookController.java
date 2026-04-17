@@ -42,7 +42,7 @@ public class BookController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public BookResponse update(@PathVariable("id") Long bookId, @Valid @RequestBody BookRequest request) {
-
+        return bookService.update(bookId, request);
     }
 
     @DeleteMapping("/{id}")

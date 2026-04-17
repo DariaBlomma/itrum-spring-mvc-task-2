@@ -5,6 +5,7 @@ import com.example.mvc2.dtos.books.BookResponse;
 import com.example.mvc2.entities.Author;
 import com.example.mvc2.entities.Book;
 import com.example.mvc2.exceptions.InvalidRequestException;
+import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.BookMapper;
 import com.example.mvc2.repositories.AuthorRepository;
 import com.example.mvc2.repositories.BookRepository;
@@ -30,18 +31,9 @@ public class BookService {
     public BookResponse create(BookRequest request) {
         Book book = bookMapper.toEntity(request);
         List<Author> activeAuthors = authorRepository.findActiveByIds(request.getAuthorIds());
-        if (activeAuthors.size() < request.getAuthorIds().size()) {
-            Set<Long> foundIds = activeAuthors.stream()
-                    .map(Author::getId)
-                    .collect(Collectors.toSet());
-
-            Set<Long> invalidIds = request.getAuthorIds().stream()
-                    .filter(id -> !foundIds.contains(id))
-                    .collect(Collectors.toSet());
-            throw new InvalidRequestException("Some authors do not exist or were deleted. Invalid ids are: " + invalidIds);
-        }
+        checkAuthorsOfRequest(activeAuthors, request.getAuthorIds());
         book.setAuthors(new HashSet<>(activeAuthors));
-        Book saved =  bookRepository.save(book);
+        Book saved = bookRepository.save(book);
         return bookMapper.toResponse(saved);
     }
 
@@ -53,11 +45,33 @@ public class BookService {
 
     }
 
+    @Transactional
     public BookResponse update(Long bookId, BookRequest request) {
+        Book book = bookRepository.findActiveByIdWithAuthors(bookId).orElseThrow(
+                () -> new ResourceNotFoundException("Book does not exist or deleted with such id " + bookId));
+        Set<Long> requestIds = request.getAuthorIds();
+        List<Author> activeAuthors = authorRepository.findActiveByIds(requestIds);
+        checkAuthorsOfRequest(activeAuthors, request.getAuthorIds());
+        bookMapper.update(request, book);
+        book.setAuthors(new HashSet<>(activeAuthors));
+        return bookMapper.toResponse(book);
+    }
+
+    @Transactional
+    public void deleteSoft(Long bookId) {
 
     }
 
-    public void deleteSoft(Long bookId) {
+    private void checkAuthorsOfRequest(List<Author> activeAuthors, Set<Long> requestIds) {
+        if (activeAuthors.size() < requestIds.size()) {
+            Set<Long> foundIds = activeAuthors.stream()
+                    .map(Author::getId)
+                    .collect(Collectors.toSet());
 
+            Set<Long> invalidIds = requestIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toSet());
+            throw new InvalidRequestException("Some authors do not exist or were deleted. Invalid ids are: " + invalidIds);
+        }
     }
 }
