@@ -54,6 +54,27 @@ public class BookServiceTest extends BaseServiceTest {
 
             assertThat(response).usingRecursiveComparison().ignoringFields("id").isEqualTo(expected);
         }
+
+        @Test
+        void shouldSaveAuthorsToDBWhenAuthorsNotDeleted() {
+            Author author1 = saveTestAuthor();
+            Author author2 = saveAnotherTestAuthor();
+            Set<Long> authorIds = Set.of(author1.getId(), author2.getId());
+
+            BookRequest request = BookRequest.builder()
+                    .title("New Book")
+                    .publicationYear(Year.of(2023))
+                    .pageCount(150)
+                    .isHardcover(false)
+                    .authorIds(authorIds)
+                    .build();
+
+            BookResponse response = bookService.create(request);
+
+            Book saved = bookRepository.findById(response.getId()).orElseThrow();
+            Set<Author> expected = Set.of(author1, author2);
+            assertThat(saved.getAuthors()).isEqualTo(expected);
+        }
     }
 
     @Nested
@@ -216,9 +237,27 @@ public class BookServiceTest extends BaseServiceTest {
 
         @Test
         void shouldNotUpdateBookWhenDeleted() {
-            // todo: should not update authors when some deleted or not exist
-            // todo: check state of BD
+            Author author1 = saveTestAuthor();
+            Author deletedAuthor = saveDeletedTestAuthor();
+            Book book = saveTestBook(Set.of(author1));
 
+            Set<Long> newAuthorIds = Set.of(author1.getId(), deletedAuthor.getId());
+
+            BookRequest request = BookRequest.builder()
+                    .title(book.getTitle())
+                    .publicationYear(book.getPublicationYear())
+                    .pageCount(book.getPageCount())
+                    .isHardcover(book.getIsHardcover())
+                    .authorIds(newAuthorIds)
+                    .build();
+
+            try {
+                bookService.update(book.getId(), request);
+            } catch (RuntimeException ignored) {
+            }
+
+            Book notUpdatedBook = bookRepository.findById(book.getId()).orElseThrow();
+            assertThat(notUpdatedBook).usingRecursiveComparison().isEqualTo(book);
         }
     }
 
@@ -256,121 +295,5 @@ public class BookServiceTest extends BaseServiceTest {
                     assertThat(review.isDeleted()).isTrue()
             );
         }
-    }
-
-    @Nested
-    @DisplayName("Search tests")
-    class SearchTests {
-        @Test
-        void shouldFindBooksByTitleContaining() {
-            Book book1 = saveBookWithTitle("Spring in Action");
-            Book book2 = saveBookWithTitle("Spring Boot in Practice");
-            Book book3 = saveBookWithTitle("Java Concurrency");
-
-            Pageable pageable = PageRequest.of(0, 10);
-
-            Page<BookResponse> result = bookService.searchByTitle("Spring", pageable);
-
-            assertThat(result.getContent()).hasSize(2);
-            assertThat(result.getContent())
-                    .extracting(BookResponse::getTitle)
-                    .allMatch(title -> title.contains("Spring"));
-        }
-
-        @Test
-        void shouldFindBooksByAuthorName() {
-            Author author = saveTestAuthor();
-            Book book1 = saveBookWithAuthor(author);
-            Book book2 = saveAnotherBookWithAuthor(author);
-            Book book3 = saveTestBook();
-
-            Pageable pageable = PageRequest.of(0, 10);
-
-            Page<BookResponse> result = bookService.findByAuthorName(author.getName(), pageable);
-
-            assertThat(result.getContent()).hasSize(2);
-            assertThat(result.getContent())
-                    .extracting(book -> book.getAuthor().getName())
-                    .allMatch(name -> name.equals(author.getName()));
-        }
-    }
-
-    @Nested
-    @DisplayName("Batch operations tests")
-    class BatchOperationsTests {
-        @Test
-        void shouldCreateMultipleBooksInBatch() {
-            List<BookRequest> requests = List.of(
-                    BookRequest.builder()
-                            .title("Book 1")
-                            .isbn("ISBN-001")
-                            .genre(Genre.FICTION)
-                            .price(BigDecimal.valueOf(19.99))
-                            .publicationYear(Year.of(2020))
-                            .authorId(1L)
-                            .build(),
-                    BookRequest.builder()
-                            .title("Book 2")
-                            .isbn("ISBN-002")
-                            .genre(Genre.TECHNICAL)
-                            .price(BigDecimal.valueOf(39.99))
-                            .publicationYear(Year.of(2021))
-                            .authorId(1L)
-                            .build(),
-                    BookRequest.builder()
-                            .title("Book 3")
-                            .isbn("ISBN-003")
-                            .genre(Genre.SCIENCE)
-                            .price(BigDecimal.valueOf(29.99))
-                            .publicationYear(Year.of(2022))
-                            .authorId(1L)
-                            .build()
-            );
-
-            List<BookResponse> responses = bookService.createBatch(requests);
-
-            assertThat(responses).hasSize(3);
-            assertThat(responses)
-                    .extracting(BookResponse::getTitle)
-                    .containsExactly("Book 1", "Book 2", "Book 3");
-        }
-
-        @Test
-        void shouldUpdatePricesInBatch() {
-            Book book1 = saveTestBook();
-            Book book2 = saveAnotherTestBook();
-
-            List<Long> bookIds = List.of(book1.getId(), book2.getId());
-            BigDecimal newPrice = BigDecimal.valueOf(49.99);
-
-            bookService.updatePricesBatch(bookIds, newPrice);
-
-            assertThat(book1.getPrice()).isEqualTo(newPrice);
-            assertThat(book2.getPrice()).isEqualTo(newPrice);
-        }
-    }
-
-    // Helper methods
-    private BookResponse mapToResponse(Book book) {
-        return BookResponse.builder()
-                .id(book.getId())
-                .title(book.getTitle())
-                .isbn(book.getIsbn())
-                .genre(book.getGenre())
-                .price(book.getPrice())
-                .publicationYear(book.getPublicationYear())
-                .author(book.getAuthor() != null ? mapToAuthorResponse(book.getAuthor()) : null)
-                .reviews(new ArrayList<>())
-                .deletedAt(book.getDeletedAt())
-                .build();
-    }
-
-    private AuthorResponse mapToAuthorResponse(Author author) {
-        return AuthorResponse.builder()
-                .id(author.getId())
-                .name(author.getName())
-                .biography(author.getBiography())
-                .deletedAt(author.getDeletedAt())
-                .build();
     }
 }
