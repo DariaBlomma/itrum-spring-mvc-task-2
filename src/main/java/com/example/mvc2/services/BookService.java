@@ -4,6 +4,7 @@ import com.example.mvc2.dtos.books.BookRequest;
 import com.example.mvc2.dtos.books.BookResponse;
 import com.example.mvc2.entities.Author;
 import com.example.mvc2.entities.Book;
+import com.example.mvc2.exceptions.ConflictException;
 import com.example.mvc2.exceptions.InvalidRequestException;
 import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.BookMapper;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -59,7 +61,12 @@ public class BookService {
 
     @Transactional
     public void deleteSoft(Long bookId) {
-
+        Book book = bookRepository.findById(bookId).orElseThrow(
+                () -> new ResourceNotFoundException("Book does not exist such ids " + bookId));
+        if (book.isDeleted()) {
+            throw new ConflictException("Book is already deleted");
+        }
+        book.setDeletedAt(Instant.now());
     }
 
     private void checkAuthorsOfRequest(List<Author> activeAuthors, Set<Long> requestIds) {

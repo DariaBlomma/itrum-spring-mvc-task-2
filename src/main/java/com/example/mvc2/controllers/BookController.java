@@ -47,7 +47,7 @@ public class BookController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void softDelete() {
-
+    public void deleteSoft(@PathVariable("id") Long bookId) {
+        bookService.deleteSoft(bookId);
     }
 }
