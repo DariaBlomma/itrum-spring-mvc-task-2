@@ -84,7 +84,7 @@ public class BookServiceTest extends BaseServiceTest {
 
     @Nested
     @DisplayName("Get one")
-    class GetOneWithAuthorTests {
+    class GetOneTests {
         @Test
         void shouldReturnBookWithAuthorsWhenBookIsNotDeleted() {
             Author author1 = saveTestAuthor();
@@ -94,6 +94,7 @@ public class BookServiceTest extends BaseServiceTest {
             BookResponse response = bookService.getOne(book.getId());
 
             BookResponse expected = BookResponse.builder()
+                    .id(book.getId())
                     .title(book.getTitle())
                     .publicationYear(book.getPublicationYear())
                     .pageCount(book.getPageCount())
