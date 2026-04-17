@@ -23,6 +23,6 @@ public class AuthorController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public AuthorResponse getOne(@PathVariable("id") Long authorId) {
-
+        return authorService.getOne(authorId);
     }
 }

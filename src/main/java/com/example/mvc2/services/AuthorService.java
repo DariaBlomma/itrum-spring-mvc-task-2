@@ -5,6 +5,7 @@ import com.example.mvc2.dtos.authors.AuthorResponse;
 import com.example.mvc2.entities.Author;
 import com.example.mvc2.entities.Book;
 import com.example.mvc2.exceptions.InvalidRequestException;
+import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.AuthorMapper;
 import com.example.mvc2.repositories.AuthorRepository;
 import com.example.mvc2.repositories.BookRepository;
@@ -38,8 +39,12 @@ public class AuthorService {
         return authorMapper.toResponse(author);
     }
 
+    @Transactional(readOnly = true)
     public AuthorResponse getOne(Long authorId) {
-
+        Author author = authorRepository.findActiveById(authorId).orElseThrow(
+                () -> new ResourceNotFoundException("Author does not exist or deleted with such id " + authorId)
+        );
+        return authorMapper.toResponse(author);
     }
 
     private void checkBooksOfRequest(List<Book> activeBooks, Set<Long> requestIds) {
