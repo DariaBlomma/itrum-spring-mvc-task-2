@@ -27,7 +27,7 @@ public class BookController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public BookResponse getOne( @PathVariable("id") Long bookId) {
-
+        return bookService.getOne(bookId);
     }
 
     @GetMapping

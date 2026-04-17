@@ -10,7 +10,7 @@ import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.BookMapper;
 import com.example.mvc2.repositories.AuthorRepository;
 import com.example.mvc2.repositories.BookRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,8 +39,11 @@ public class BookService {
         return bookMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public BookResponse getOne(Long bookId) {
-
+        Book book = bookRepository.findActiveByIdWithAuthors(bookId).orElseThrow(
+                () -> new ResourceNotFoundException("Book does not exist or deleted with such id " + bookId));
+        return bookMapper.toResponse(book);
     }
 
     public Page<BookResponse> getList(Pageable pageable) {
