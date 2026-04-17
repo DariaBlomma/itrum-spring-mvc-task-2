@@ -62,9 +62,20 @@ public abstract class BaseServiceTest {
         return book;
     }
 
-
-
     protected Book saveAnotherTestBook(Set<Author> authors) {
+        Book book = Book.builder()
+                .title("Another Book")
+                .publicationYear(Year.of(2019))
+                .pageCount(200)
+                .isHardcover(false)
+                .authors(authors)
+                .deletedAt(null)
+                .build();
+        entityManager.persistAndFlush(book);
+        return book;
+    }
+
+    protected Book saveDeletedTestBook(Set<Author> authors) {
         Book book = Book.builder()
                 .title("Deleted Book")
                 .publicationYear(Year.of(2019))
