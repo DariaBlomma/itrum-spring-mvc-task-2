@@ -36,7 +36,7 @@ public class BookController {
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC)
            Pageable pageable
     ) {
-
+        return bookService.getList(pageable);
     }
 
     @PutMapping("/{id}")

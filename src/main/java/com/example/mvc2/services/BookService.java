@@ -10,6 +10,7 @@ import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.BookMapper;
 import com.example.mvc2.repositories.AuthorRepository;
 import com.example.mvc2.repositories.BookRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,14 @@ public class BookService {
     private final BookMapper bookMapper;
     private final AuthorRepository authorRepository;
 
+    private final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id",
+            "title",
+            "publicationYear",
+            "pageCount",
+            "isHardcover"
+    );
+
     @Transactional
     public BookResponse create(BookRequest request) {
         Book book = bookMapper.toEntity(request);
@@ -46,8 +55,11 @@ public class BookService {
         return bookMapper.toResponse(book);
     }
 
+    @Transactional(readOnly = true)
     public Page<BookResponse> getList(Pageable pageable) {
-
+        validateSortFields(pageable.getSort());
+        Page<Book> bookPage = bookRepository.findAllActiveWithAuthorsPaginated(pageable);
+        return bookPage.map(bookMapper::toResponse);
     }
 
     @Transactional
@@ -82,6 +94,15 @@ public class BookService {
                     .filter(id -> !foundIds.contains(id))
                     .collect(Collectors.toSet());
             throw new InvalidRequestException("Some authors do not exist or were deleted. Invalid ids are: " + invalidIds);
+        }
+    }
+
+    private void validateSortFields(Sort sort) {
+        for (Sort.Order order : sort) {
+            String prop = order.getProperty();
+            if (!ALLOWED_SORT_FIELDS.contains(prop)) {
+                throw new InvalidRequestException("Such property is not supported for sorting " + prop);
+            }
         }
     }
 }
