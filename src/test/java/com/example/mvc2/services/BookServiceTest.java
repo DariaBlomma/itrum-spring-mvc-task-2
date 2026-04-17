@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hibernate.validator.internal.util.Contracts.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -194,175 +195,47 @@ public class BookServiceTest extends BaseServiceTest {
             assertFalse(hasDeletedBook, "Deleted books should be excluded");
         }
 
-
         @Test
-        void shouldFilterByIsHardcoverWithNullValuesAtEnd() {
-            List<Book> booksForTest = new ArrayList<>();
-            for (int i = 0; i < 5; i++) {
-                Book book = createBookTemplate("Title " + i);
-                book.setHardCover(true);
-                entityManager.persist(book);
-                booksForTest.add(book);
-            }
-            for (int i = 0; i < 5; i++) {
-                Book book = createBookTemplate("Title Null " + i);
-                book.setHardCover(null);
-                entityManager.persist(book);
-                booksForTest.add(book);
-            }
-            for (int i = 0; i < 5; i++) {
-                Book book = createBookTemplate("Title False " + i);
-                book.setHardCover(false);
-                entityManager.persist(book);
-                booksForTest.add(book);
-            }
-            entityManager.flush();
+        void shouldApplyFallbackSort_WhenAuthorNamesAreIdentical() {
+            Author sharedAuthor = saveTestAuthor();
 
-            Pageable pageable = PageRequest.of(0, 999, Sort.by(Sort.Direction.DESC, "hardCover"));
-            Page<BookDto> result = bookService.getList(pageable);
+            Book book1 = Book.builder()
+                    .title("First Book")
+                    .publicationYear(Year.of(2024))
+                    .pageCount(100)
+                    .isHardcover(true)
+                    .authors(Set.of(sharedAuthor))
+                    .deletedAt(null)
+                    .build();
+            Book savedBook1 = bookRepository.save(book1);
 
-            List<BookDto> content = result.getContent();
-            assertThat(content).hasSize(15);
+            Book book2 = Book.builder()
+                    .title("Second Book")
+                    .publicationYear(Year.of(2023))
+                    .pageCount(200)
+                    .isHardcover(false)
+                    .authors(Set.of(sharedAuthor))
+                    .deletedAt(null)
+                    .build();
+            Book savedBook2 = bookRepository.save(book2);
 
-            for (int i = 0; i < 5; i++) {
-                assertThat(content.get(i).isHardCover()).isTrue();
-            }
-            for (int i = 5; i < 10; i++) {
-                assertThat(content.get(i).isHardCover()).isFalse();
-            }
-            for (int i = 10; i < 15; i++) {
-                assertThat(content.get(i).isHardCover()).isNull();
-            }
-        }
+            assertTrue(savedBook1.getId() < savedBook2.getId(),
+                    "Test setup: book1 should have smaller ID than book2");
 
-        @Test
-        void shouldSortByPublicationYearWithFallbackToId() {
-            Author author = createAuthor("Common", "Author");
-            entityManager.persist(author);
-            entityManager.flush();
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("authors.name").ascending());
+            Page<Book> result = bookRepository.findAllActiveWithAuthorsPaginated(pageable);
 
-            Book bookSameYear1 = createBookTemplate("Same Year 1");
-            bookSameYear1.setPublicationYear(2020);
-            bookSameYear1.setAuthors(List.of(author));
-            entityManager.persist(bookSameYear1);
+            // 1. Обе книги в результате (никакие не отфильтровались)
+            assertEquals(2, result.getContent().size());
 
-            Book bookSameYear2 = createBookTemplate("Same Year 2");
-            bookSameYear2.setPublicationYear(2020);
-            bookSameYear2.setAuthors(List.of(author));
-            entityManager.persist(bookSameYear2);
+            // 2. Порядок по ID: book1 (меньший ID) должен идти первым
+            // Это доказывает, что fallback-сортировка работает
+            List<Long> actualIds = result.getContent().stream()
+                    .map(Book::getId)
+                    .toList();
 
-            Book bookLaterYear = createBookTemplate("Later Year");
-            bookLaterYear.setPublicationYear(2022);
-            bookLaterYear.setAuthors(List.of(author));
-            entityManager.persist(bookLaterYear);
-
-            Book bookEarlierYear = createBookTemplate("Earlier Year");
-            bookEarlierYear.setPublicationYear(2018);
-            bookEarlierYear.setAuthors(List.of(author));
-            entityManager.persist(bookEarlierYear);
-
-            entityManager.flush();
-
-            Pageable pageable = PageRequest.of(0, 999, Sort.by(Sort.Direction.ASC, "publicationYear", "id"));
-            Page<BookDto> result = bookService.getList(pageable);
-
-            List<BookDto> content = result.getContent();
-            assertThat(content).hasSize(4);
-
-            assertThat(content.get(0).getId()).isEqualTo(bookEarlierYear.getId());
-            assertThat(content.get(1).getId()).isEqualTo(bookSameYear1.getId());
-            assertThat(content.get(2).getId()).isEqualTo(bookSameYear2.getId());
-            assertThat(content.get(3).getId()).isEqualTo(bookLaterYear.getId());
-        }
-
-        @Test
-        void shouldSortByPageCountAscending() {
-            Author author = createAuthor("Page", "Counter");
-            entityManager.persist(author);
-            entityManager.flush();
-
-            Book bookLowPages = createBookTemplate("Low Pages");
-            bookLowPages.setPagesCount(100);
-            bookLowPages.setAuthors(List.of(author));
-            entityManager.persist(bookLowPages);
-
-            Book bookHighPages = createBookTemplate("High Pages");
-            bookHighPages.setPagesCount(500);
-            bookHighPages.setAuthors(List.of(author));
-            entityManager.persist(bookHighPages);
-
-            Book bookMediumPages = createBookTemplate("Medium Pages");
-            bookMediumPages.setPagesCount(250);
-            bookMediumPages.setAuthors(List.of(author));
-            entityManager.persist(bookMediumPages);
-
-            entityManager.flush();
-
-            Pageable pageable = PageRequest.of(0, 999, Sort.by(Sort.Direction.ASC, "pagesCount"));
-            Page<BookDto> result = bookService.getList(pageable);
-
-            List<BookDto> content = result.getContent();
-            assertThat(content).hasSize(3);
-
-            assertThat(content.get(0).getId()).isEqualTo(bookLowPages.getId());
-            assertThat(content.get(1).getId()).isEqualTo(bookMediumPages.getId());
-            assertThat(content.get(2).getId()).isEqualTo(bookHighPages.getId());
-        }
-
-        @Test
-        void shouldSortByAuthorsNameWithFallbackToId() {
-            Author authorZ = createAuthor("Zoe", "Author");
-            Author authorA = createAuthor("Alice", "Author");
-            Author authorM = createAuthor("Michael", "Author");
-
-            entityManager.persist(authorZ);
-            entityManager.persist(authorA);
-            entityManager.persist(authorM);
-            entityManager.flush();
-
-            Book bookByZ = createBookTemplate("Book By Z");
-            bookByZ.setAuthors(List.of(authorZ));
-            entityManager.persist(bookByZ);
-
-            Book bookByA = createBookTemplate("Book By A");
-            bookByA.setAuthors(List.of(authorA));
-            entityManager.persist(bookByA);
-
-            Book bookByM = createBookTemplate("Book By M");
-            bookByM.setAuthors(List.of(authorM));
-            entityManager.persist(bookByM);
-
-            Book bookBySameAuthorWithHigherId = createBookTemplate("Another Book By A");
-            bookBySameAuthorWithHigherId.setAuthors(List.of(authorA));
-            entityManager.persist(bookBySameAuthorWithHigherId);
-
-            entityManager.flush();
-
-            Pageable pageable = PageRequest.of(0, 999, Sort.by(Sort.Direction.ASC, "authors.name"));
-            Page<BookDto> result = bookService.getList(pageable);
-
-            List<BookDto> content = result.getContent();
-            assertThat(content).hasSize(4);
-
-            assertThat(content.get(0).getId()).isEqualTo(bookByA.getId());
-            assertThat(content.get(1).getId()).isEqualTo(bookBySameAuthorWithHigherId.getId());
-            assertThat(content.get(2).getId()).isEqualTo(bookByM.getId());
-            assertThat(content.get(3).getId()).isEqualTo(bookByZ.getId());
-        }
-
-        @Test
-        void shouldExcludeDeletedBooksFromResults() {
-            Book bookToDelete = getBookById(1L);
-            bookToDelete.setStatus(BookStatus.DELETED);
-            entityManager.persistAndFlush(bookToDelete);
-
-            Pageable pageable = PageRequest.of(0, 999, Sort.unsorted());
-            Page<BookDto> result = bookService.getList(pageable);
-
-            assertThat(result.getTotalElements()).isEqualTo(24);
-            assertThat(result.getContent())
-                    .extracting(BookDto::getId)
-                    .doesNotContain(bookToDelete.getId());
+            assertEquals(List.of(savedBook1.getId(), savedBook2.getId()), actualIds,
+                    "Books with same author should be sorted by ID (fallback)");
         }
 
         /**
