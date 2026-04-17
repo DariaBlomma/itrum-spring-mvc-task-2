@@ -10,6 +10,7 @@ import com.example.mvc2.exceptions.ResourceNotFoundException;
 import com.example.mvc2.mappers.BookMapper;
 import com.example.mvc2.repositories.AuthorRepository;
 import com.example.mvc2.repositories.BookRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,8 @@ public class BookService {
             "title",
             "publicationYear",
             "pageCount",
-            "isHardcover"
+            "isHardcover",
+            "authors.name"
     );
 
     @Transactional
@@ -58,7 +60,8 @@ public class BookService {
     @Transactional(readOnly = true)
     public Page<BookResponse> getList(Pageable pageable) {
         validateSortFields(pageable.getSort());
-        Page<Book> bookPage = bookRepository.findAllActiveWithAuthorsPaginated(pageable);
+        Pageable stablePageable = addFallbackSort(pageable);
+        Page<Book> bookPage = bookRepository.findAllActiveWithAuthorsPaginated(stablePageable);
         return bookPage.map(bookMapper::toResponse);
     }
 
@@ -104,5 +107,13 @@ public class BookService {
                 throw new InvalidRequestException("Such property is not supported for sorting " + prop);
             }
         }
+    }
+
+    private Pageable addFallbackSort(Pageable pageable) {
+        Sort sort = pageable.getSort();
+        if (sort.getOrderFor("id") == null) {
+            sort = sort.and(Sort.by("id").ascending());
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
