@@ -2,10 +2,11 @@ package com.example.mvc2.services;
 
 import com.example.mvc2.entities.Author;
 import com.example.mvc2.entities.Book;
+import com.example.mvc2.repositories.AuthorRepository;
+import com.example.mvc2.repositories.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import java.time.Instant;
 import java.time.Year;
 import java.util.Set;
@@ -13,32 +14,31 @@ import java.util.Set;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public abstract class BaseServiceTest {
+    @Autowired
+    protected BookRepository bookRepository;
 
     @Autowired
-    protected TestEntityManager entityManager;
+    protected AuthorRepository authorRepository;
 
     protected Author saveTestAuthor() {
         Author author = Author.builder()
                 .name("Author One")
                 .build();
-        entityManager.persistAndFlush(author);
-        return author;
+        return authorRepository.save(author);
     }
 
     protected Author saveAnotherTestAuthor() {
         Author author = Author.builder()
                 .name("Author Two")
                 .build();
-        entityManager.persistAndFlush(author);
-        return author;
+        return authorRepository.save(author);
     }
 
     protected Author saveTestAuthor3() {
         Author author = Author.builder()
                 .name("Author Three")
                 .build();
-        entityManager.persistAndFlush(author);
-        return author;
+        return authorRepository.save(author);
     }
 
     protected Author saveDeletedTestAuthor() {
@@ -46,8 +46,7 @@ public abstract class BaseServiceTest {
                 .name("Deleted Author")
                 .deletedAt(Instant.now())
                 .build();
-        entityManager.persistAndFlush(author);
-        return author;
+        return authorRepository.save(author);
     }
 
     protected Book saveTestBook(Set<Author> authors) {
@@ -58,8 +57,7 @@ public abstract class BaseServiceTest {
                 .isHardcover(true)
                 .authors(authors)
                 .build();
-        entityManager.persistAndFlush(book);
-        return book;
+        return bookRepository.save(book);
     }
 
     protected Book saveAnotherTestBook(Set<Author> authors) {
@@ -71,8 +69,7 @@ public abstract class BaseServiceTest {
                 .authors(authors)
                 .deletedAt(null)
                 .build();
-        entityManager.persistAndFlush(book);
-        return book;
+        return bookRepository.save(book);
     }
 
     protected Book saveDeletedTestBook(Set<Author> authors) {
@@ -84,7 +81,6 @@ public abstract class BaseServiceTest {
                 .authors(authors)
                 .deletedAt(Instant.now())
                 .build();
-        entityManager.persistAndFlush(book);
-        return book;
+        return bookRepository.save(book);
     }
 }
