@@ -9,7 +9,7 @@ import java.time.Year;
 import java.util.Set;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @RequiredArgsConstructor
 @AllArgsConstructor
 public class BookResponse {
