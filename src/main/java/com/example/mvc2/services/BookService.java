@@ -35,8 +35,7 @@ public class BookService {
             "title",
             "publicationYear",
             "pageCount",
-            "isHardcover",
-            "authors.name"
+            "isHardcover"
     );
 
     @Transactional

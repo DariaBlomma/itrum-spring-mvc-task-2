@@ -137,7 +137,7 @@ public class BookServiceTest extends BaseServiceTest {
         @Test
         void shouldReturnDistinctBooks_WhenBookHasMultipleAuthors() {
             String bookName = "Book With 3 Authors";
-            Book book = saveBookWith3Authors(bookName); // создает 3 строки в JOIN
+            saveBookWith3Authors(bookName); // создает 3 строки в JOIN
 
             Page<BookResponse> result = bookService.getList(Pageable.ofSize(10));
 
@@ -183,10 +183,10 @@ public class BookServiceTest extends BaseServiceTest {
         }
 
         @Test
-        void shouldApplyFallbackSort_WhenAuthorNamesAreIdentical() {
+        void shouldApplyFallbackSort_WhenBookNamesAreIdentical() {
             Author sharedAuthor = saveTestAuthor();
 
-            Book book1 = Book.builder()
+            Book book = Book.builder()
                     .title("First Book")
                     .publicationYear(Year.of(2024))
                     .pageCount(100)
@@ -194,35 +194,26 @@ public class BookServiceTest extends BaseServiceTest {
                     .authors(Set.of(sharedAuthor))
                     .deletedAt(null)
                     .build();
-            Book savedBook1 = bookRepository.save(book1);
-
-            Book book2 = Book.builder()
-                    .title("Second Book")
-                    .publicationYear(Year.of(2023))
-                    .pageCount(200)
-                    .isHardcover(false)
-                    .authors(Set.of(sharedAuthor))
-                    .deletedAt(null)
-                    .build();
+            Book book2 = book.toBuilder().build();
+            Book savedBook1 = bookRepository.save(book);
             Book savedBook2 = bookRepository.save(book2);
 
             assertTrue(savedBook1.getId() < savedBook2.getId(),
                     "Test setup: book1 should have smaller ID than book2");
 
-            Pageable pageable = PageRequest.of(0, 10, Sort.by("authors.name").ascending());
-            Page<Book> result = bookRepository.findAllActiveWithAuthorsPaginated(pageable);
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("title").ascending());
+            Page<BookResponse> result = bookService.getList(pageable);
 
-            // 1. Обе книги в результате (никакие не отфильтровались)
             assertEquals(2, result.getContent().size());
 
             // 2. Порядок по ID: book1 (меньший ID) должен идти первым
             // Это доказывает, что fallback-сортировка работает
             List<Long> actualIds = result.getContent().stream()
-                    .map(Book::getId)
+                    .map(BookResponse::getId)
                     .toList();
 
             assertEquals(List.of(savedBook1.getId(), savedBook2.getId()), actualIds,
-                    "Books with same author should be sorted by ID (fallback)");
+                    "Books with same title should be sorted by ID (fallback)");
         }
 
         /**
