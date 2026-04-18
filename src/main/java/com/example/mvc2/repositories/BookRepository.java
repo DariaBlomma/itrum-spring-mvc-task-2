@@ -16,9 +16,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Optional<Book> findActiveById(@Param("id") Long id);
 
     @Query("SELECT b FROM Book b WHERE b.id IN :ids AND b.deletedAt IS NULL")
-    List<Book> finaActiveByIds(@Param("ids")Set<Long> ids);
+    List<Book> findActiveByIds(@Param("ids")Set<Long> ids);
 
-    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE b.id = :id AND b.deletedAt IS NULL AND (a.deletedAt IS NULL OR a IS NULL)")
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE b.id = :id AND b.deletedAt IS NULL")
     Optional<Book> findActiveByIdWithAuthors(@Param("id") Long id);
 
     @Query(

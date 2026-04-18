@@ -30,13 +30,14 @@ public class AuthorService {
         Author author = authorMapper.toEntity(request);
         Set<Long> requestIds = request.getBookIds();
         if (!requestIds.isEmpty()) {
-            List<Book> activeBooks = bookRepository.finaActiveByIds(request.getBookIds());
+            List<Book> activeBooks = bookRepository.findActiveByIds(request.getBookIds());
             checkBooksOfRequest(activeBooks, requestIds);
             author.setBooks(new HashSet<>(activeBooks));
         } else {
             author.setBooks(new HashSet<>());
         }
-        return authorMapper.toResponse(author);
+        Author saved = authorRepository.save(author);
+        return authorMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
