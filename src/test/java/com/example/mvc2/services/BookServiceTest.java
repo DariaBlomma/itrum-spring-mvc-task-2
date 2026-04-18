@@ -155,9 +155,9 @@ public class BookServiceTest extends BaseServiceTest {
             bookRepository.save(book1);
 
             // Книга с 3 активными авторами (проверка на дубликаты DISTINCT)
-            Author a1 = authorRepository.save(activeAuthor.toBuilder().name("A1").build());
-            Author a2 = authorRepository.save(activeAuthor.toBuilder().name("A2").build());
-            Author a3 = authorRepository.save(activeAuthor.toBuilder().name("A3").build());
+            Author a1 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A1").build());
+            Author a2 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A2").build());
+            Author a3 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A3").build());
             Book book2 = baseBook.toBuilder()
                     .title("Book With 3 Authors")
                     .authors(Set.of(a1, a2, a3))
@@ -167,11 +167,10 @@ public class BookServiceTest extends BaseServiceTest {
             // Удаленная книга (проверка фильтра книг)
            saveDeletedTestBook(Set.of(activeAuthor));
 
-            Page<Book> result = bookRepository.findAllActiveWithAuthorsPaginated(Pageable.ofSize(10));
-
+            Page<BookResponse> result = bookService.getList(Pageable.ofSize(10));
 
             // 1. Проверка DISTINCT: book2 не должен дублироваться, несмотря на 3 авторов
-            assertEquals(3, result.getContent().size(), "Should have 3 active books");
+            assertEquals(2, result.getContent().size(), "Should have 2 active books");
 
             long book2Count = result.getContent().stream()
                     .filter(b -> b.getTitle().equals("Book With 3 Authors"))
@@ -180,19 +179,16 @@ public class BookServiceTest extends BaseServiceTest {
 
             // 2. Проверка JOIN FETCH: доступ к авторам не должен вызывать исключений
             // и коллекция не должна быть пустой для book1 и book2
-            Book fetchedBook1 = result.getContent().stream()
+            BookResponse fetchedBook1 = result.getContent().stream()
                     .filter(b -> b.getTitle().equals("Book With Mixed Authors"))
                     .findFirst().orElseThrow(() -> new AssertionError("Expected book not found"));
 
             // 3. Проверка фильтра авторов: удаленный автор не должен попасть в коллекцию
-            assertEquals(1, fetchedBook1.getAuthors().size(), "Deleted author should be filtered out");
-            boolean hasDeletedAuthor = fetchedBook1.getAuthors().stream()
-                    .anyMatch(author -> author.getDeletedAt() == null);
-            assertFalse(hasDeletedAuthor, "Deleted author should not be in the collection");
+            assertEquals(1, fetchedBook1.getAuthorIds().size(), "Deleted author should be filtered out");
 
             // 4. Проверка фильтра книг: удаленная книга не должна быть в списке
             boolean hasDeletedBook = result.getContent().stream()
-                    .anyMatch(b -> b.getDeletedAt() == null);
+                    .anyMatch(b -> b.getDeletedAt() != null);
             assertFalse(hasDeletedBook, "Deleted books should be excluded");
         }
 

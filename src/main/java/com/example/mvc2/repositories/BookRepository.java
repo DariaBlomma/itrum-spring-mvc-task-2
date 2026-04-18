@@ -22,8 +22,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Optional<Book> findActiveByIdWithAuthors(@Param("id") Long id);
 
     @Query(
-            value = "SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE b.deletedAt IS NULL AND (a.deletedAt IS NULL OR a IS NULL)",
-            countQuery = "SELECT COUNT(DISTINCT b) FROM Book b LEFT JOIN b.authors a WHERE b.deletedAt IS NULL AND (a.deletedAt IS NULL OR a IS NULL)"
+            value = "SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE b.deletedAt IS NULL",
+            countQuery = "SELECT COUNT(DISTINCT b) FROM Book b LEFT JOIN b.authors a WHERE b.deletedAt IS NULL"
     )
     Page<Book> findAllActiveWithAuthorsPaginated(Pageable pageable);
 }

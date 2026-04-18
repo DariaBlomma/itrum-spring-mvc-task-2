@@ -7,7 +7,6 @@ import com.example.mvc2.entities.Book;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
-
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -21,7 +20,10 @@ public interface BookMapper {
 
     default Set<Long> mapAuthorsToIds(Collection<Author> authors) {
         if (authors == null) return Set.of();
-        return authors.stream().map(Author::getId).collect(Collectors.toUnmodifiableSet());
+        return authors.stream()
+                .filter(author -> !author.isDeleted())
+                .map(Author::getId)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     void update(BookRequest request, @MappingTarget Book user);
