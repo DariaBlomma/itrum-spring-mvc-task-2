@@ -83,4 +83,26 @@ public abstract class BaseServiceTest {
                 .build();
         return bookRepository.save(book);
     }
+
+    protected Book getBaseBook() {
+        return Book.builder()
+                .publicationYear(Year.now())
+                .pageCount(34)
+                .isHardcover(true)
+                .authors(Set.of())
+                .deletedAt(null)
+                .build();
+    }
+
+    protected Book saveBookWith3Authors(String bookName) {
+        Author activeAuthor = saveTestAuthor();
+        Author a1 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A1").build());
+        Author a2 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A2").build());
+        Author a3 = authorRepository.save(activeAuthor.toBuilder().id(null).name("A3").build());
+        Book book = getBaseBook().toBuilder()
+                .title(bookName)
+                .authors(Set.of(a1, a2, a3))
+                .build();
+        return bookRepository.save(book);
+    }
 }
